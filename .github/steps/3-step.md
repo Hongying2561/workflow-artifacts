@@ -1,35 +1,93 @@
-## Step 3: (replace-me: STEP-NAME)
+## Step 3: Build and deploy with artifact downloads
 
-(replace-me: OPTIONAL Brief story or scenario to introduce the step)
+Great progress! You're already an expert on uploading workflow artifacts!
 
-### 📖 Theory: (replace-me: Theory title)
+Now how do you download these artifacts in GitHub Actions workflows?
 
-<!-- GitHub-styled notifications can be used outside of ordered lists. Available options are: NOTE, IMPORTANT, WARNING, TIP, CAUTION -->
-<!--
-> [!NOTE]
-> (Important note or additional information relevant to this section)
- -->
+Let's learn that!
 
-(replace-me: Optional theory or background information relevant to this step)
+### 📖 Theory: Downloading artifacts
 
-### ⌨️ Activity: (replace-me: Activity title)
+GitHub provides the official [actions/download-artifact](https://github.com/actions/download-artifact) action to retrieve files that were previously uploaded as workflow artifacts.
 
-1. (replace-me: First instruction)
+In the simplest case, a later job in the same workflow can download an artifact **by name** and use its contents **without rebuilding them**.
 
-   (replace-me: Make sure to properly indent any multiline instructions)
+Key things to remember:
 
-1. (replace-me: Second instruction)
+- 📦 Artifacts are tied to a specific **workflow run**.
+- 🔁 A later job in the same run can download artifacts from an earlier job.
 
-   (replace-me: Optionally reference images from the `.github/images/` directory to support any part of the content)
+### ⌨️ Activity: Create the build and deploy workflow
 
-   <img width="200" alt="descriptive alt text" src="../images/jetpacktocat.png" />
+Let's set up a workflow that will build the site and upload it as an artifact, then a downstream job that will download that artifact and simulate a deployment step.
 
-1. (replace-me: Additional instructions as needed)
+1. Create a new workflow file in `.github/workflows` named:
 
-<details>
-<summary>Having trouble? 🤷</summary><br/>
+   ```text
+   build-deploy.yml
+   ```
 
-- (replace-me: Troubleshooting tip or hint)
-- (replace-me: Additional troubleshooting tips as needed)
+1. Add the following content to the workflow file:
 
-</details>
+   ```yaml
+   name: Build and Deploy
+
+   on:
+     workflow_dispatch:
+     push:
+       branches: [main]
+
+   permissions:
+     contents: read
+
+   jobs:
+     build:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v6
+         - uses: actions/setup-node@v6
+           with:
+             node-version: 24
+             cache: npm
+         - run: npm ci
+         - run: npm run build
+         - uses: actions/upload-artifact@v7
+           with:
+             name: octomatch
+             path: dist
+   ```
+
+   This job builds the site and uploads it as `octomatch` artifact so other jobs can download it.
+
+   It will run on every push to `main` and can also be triggered manually from the Actions tab.
+
+1. Now let's add a `dev` job that will download that artifact.
+
+   Add the following content under `jobs:` in the same workflow file:
+
+   ```yaml
+   dev:
+     name: Deploy Dev
+     needs: build
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/download-artifact@v8
+         with:
+           name: octomatch
+           path: website
+       - name: Deploy to Dev
+         run: |
+           echo "Downloaded artifact contents:"
+           tree website
+           echo "Demo deploy step: replace with your real deploy command."
+   ```
+
+   In this scenario we just list the contents of the downloaded artifact, but in a real workflow this is where you could run your deployment scripts.
+
+1. Commit and push your changes to the `main` branch to trigger this workflow.
+
+1. Navigate to the **[Actions](https://github.com/{{full_repo_name}}/actions/workflows/build-deploy.yml)** tab and inspect the logs of the `Deploy Dev` job.
+
+   You should see the output of the `tree website` command showing the contents of the downloaded artifact
+
+    <img width="900" alt="Logs of the Deploy Dev job showing the output of the tree command with the downloaded artifact contents" src="../images/deploy-dev-artifact-contents.png" />

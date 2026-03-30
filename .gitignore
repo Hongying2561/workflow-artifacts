@@ -35,3 +35,19 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Packages and generated files #
+##################
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.local
+
+# Environment variables #
+#########################
+.env
+.env.*
+!.env.example
+
